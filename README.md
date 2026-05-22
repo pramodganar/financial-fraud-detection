@@ -85,9 +85,9 @@ Final model selected:
 
 ---
 
-# 📊 Evaluation Metrics
 
-# 📊 Evaluation Metrics
+
+
 
 # 📊 Evaluation Metrics
 
@@ -99,7 +99,6 @@ Final model selected:
 | F1-Score | 40.33% |
 | ROC-AUC | 99.73% |
 
-> Replace XX with your actual scores.
 
 ---
 
@@ -129,21 +128,6 @@ The project includes a real-time fraud detection web application built using Str
 
 ---
 
-# 📸 Application Screenshots
-
-## Home Page
-
-Add screenshot here.
-
-## Fraud Prediction
-
-Add screenshot here.
-
-## Legitimate Transaction
-
-Add screenshot here.
-
----
 
 # 🛠️ Tech Stack
 
