@@ -87,13 +87,17 @@ Final model selected:
 
 # 📊 Evaluation Metrics
 
+# 📊 Evaluation Metrics
+
+# 📊 Evaluation Metrics
+
 | Metric | Score |
 |---|---|
-| Accuracy | XX |
-| Precision | XX |
-| Recall | XX |
-| F1-Score | XX |
-| ROC-AUC | XX |
+| Accuracy | 99.64% |
+| Precision | 25.69% |
+| Recall | 93.80% |
+| F1-Score | 40.33% |
+| ROC-AUC | 99.73% |
 
 > Replace XX with your actual scores.
 
@@ -170,3 +174,7 @@ financial-fraud-detection/
 ├── requirements.txt
 ├── README.md
 └── .gitignore
+
+## Live Demo
+
+https://financial-fraud-detection-jrjuipy2mrkbxan9h8denu.streamlit.app/
