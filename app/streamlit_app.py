@@ -11,14 +11,29 @@ import os
 
 
 # ============================================
+# BASE DIRECTORY
+# ============================================
+
+BASE_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..')
+)
+
+
+# ============================================
 # ADD SRC PATH
 # ============================================
 
-sys.path.append(
-    os.path.abspath(
-        os.path.join(os.path.dirname(__file__), '..', 'src')
-    )
+SRC_PATH = os.path.join(
+    BASE_DIR,
+    'src'
 )
+
+sys.path.append(SRC_PATH)
+
+
+# ============================================
+# IMPORT PREPROCESSING FUNCTION
+# ============================================
 
 from data_preprocessing import preprocess_data
 
@@ -66,16 +81,24 @@ st.markdown("""
 
 
 # ============================================
-# LOAD MODEL
+# LOAD MODEL FILES
 # ============================================
 
-model = joblib.load(
-    r"C:\Users\Dell\Desktop\classification project\financial-fraud-detection\models\fraud_detection_model.pkl"
+model_path = os.path.join(
+    BASE_DIR,
+    'models',
+    'fraud_detection_model.pkl'
 )
 
-scaler = joblib.load(
-    r"C:\Users\Dell\Desktop\classification project\financial-fraud-detection\models\scaler.pkl"
+scaler_path = os.path.join(
+    BASE_DIR,
+    'models',
+    'scaler.pkl'
 )
+
+model = joblib.load(model_path)
+
+scaler = joblib.load(scaler_path)
 
 
 # ============================================
@@ -93,6 +116,7 @@ st.sidebar.markdown("""
 - Feature Engineering
 - StandardScaler
 - Ensemble Learning
+- Threshold Tuning
 
 ## Evaluation Metrics
 - ROC-AUC
@@ -362,10 +386,10 @@ if st.button("🔍 Predict Fraud"):
     st.table(result_df)
 
     # ========================================
-    # MODEL INSIGHT
+    # MODEL INSIGHTS
     # ========================================
 
-    st.subheader("🧠 Model Insight")
+    st.subheader("🧠 Fraud Insights")
 
     if amount > 200000:
 
@@ -388,7 +412,7 @@ if st.button("🔍 Predict Fraud"):
     if isFlaggedFraud == 1:
 
         st.warning(
-            "Transaction flagged by system rules."
+            "Transaction already flagged as suspicious."
         )
 
 
