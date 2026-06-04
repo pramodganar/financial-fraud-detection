@@ -2,6 +2,7 @@
 # IMPORT LIBRARIES
 # ============================================
 
+import os
 import pandas as pd
 import numpy as np
 import joblib
@@ -25,37 +26,115 @@ from data_preprocessing import preprocess_data
 
 
 # ============================================
+# BASE DIRECTORY
+# ============================================
+
+BASE_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..')
+)
+
+
+# ============================================
+# DATASET PATH
+# ============================================
+
+dataset_path = os.path.join(
+    BASE_DIR,
+    'data',
+    'raw',
+    'fraud_detection.csv'
+)
+
+
+# ============================================
+# MODEL SAVE PATHS
+# ============================================
+
+model_save_path = os.path.join(
+    BASE_DIR,
+    'models',
+    'fraud_detection_model.pkl'
+)
+
+scaler_save_path = os.path.join(
+    BASE_DIR,
+    'models',
+    'scaler.pkl'
+)
+
+
+# ============================================
+# TEST FILE SAVE PATHS
+# ============================================
+
+x_test_path = os.path.join(
+    BASE_DIR,
+    'data',
+    'processed',
+    'X_test.pkl'
+)
+
+y_test_path = os.path.join(
+    BASE_DIR,
+    'data',
+    'processed',
+    'y_test.pkl'
+)
+
+
+# ============================================
+# CREATE REQUIRED DIRECTORIES
+# ============================================
+
+os.makedirs(
+    os.path.join(BASE_DIR, 'models'),
+    exist_ok=True
+)
+
+os.makedirs(
+    os.path.join(BASE_DIR, 'data', 'processed'),
+    exist_ok=True
+)
+
+
+# ============================================
 # LOAD DATASET
 # ============================================
 
-print("Loading dataset...")
+print("====================================")
+print("LOADING DATASET")
+print("====================================")
 
-df = pd.read_csv(
-    r"C:\Users\Dell\Desktop\classification project\financial-fraud-detection\data\raw\fraud_detection.csv"
-)
+df = pd.read_csv(dataset_path)
 
 print("Dataset loaded successfully")
+
+print(f"Dataset Shape: {df.shape}")
 
 
 # ============================================
 # SAMPLE DATA
 # ============================================
 
-print("Creating sample dataset...")
+print("\n====================================")
+print("SAMPLING DATA")
+print("====================================")
 
 df = df.sample(
     500000,
     random_state=42
 )
 
-print(f"Sample dataset shape: {df.shape}")
+print(f"Sample Dataset Shape: {df.shape}")
 
 
 # ============================================
 # PREPROCESS DATA
 # ============================================
 
-print("Preprocessing dataset...")
+print("\n====================================")
+print("PREPROCESSING DATA")
+print("====================================")
 
 df = preprocess_data(df)
 
@@ -63,19 +142,49 @@ print("Preprocessing completed")
 
 
 # ============================================
+# CHECK MISSING VALUES
+# ============================================
+
+print("\nChecking missing values...")
+
+missing_values = df.isnull().sum()
+
+print(missing_values[missing_values > 0])
+
+df = df.fillna(0)
+
+print("Missing values handled")
+
+
+# ============================================
 # SPLIT FEATURES & TARGET
 # ============================================
 
-X = df.drop('isFraud', axis=1)
+print("\n====================================")
+print("FEATURES & TARGET")
+print("====================================")
+
+X = df.drop(
+    'isFraud',
+    axis=1
+)
 
 y = df['isFraud']
 
 print("Features and target separated")
 
+print(f"X Shape: {X.shape}")
+
+print(f"y Shape: {y.shape}")
+
 
 # ============================================
 # TRAIN TEST SPLIT
 # ============================================
+
+print("\n====================================")
+print("TRAIN TEST SPLIT")
+print("====================================")
 
 X_train, X_test, y_train, y_test = train_test_split(
     X,
@@ -87,35 +196,44 @@ X_train, X_test, y_train, y_test = train_test_split(
 
 print("Train-test split completed")
 
-print(f"X_train shape: {X_train.shape}")
-print(f"X_test shape: {X_test.shape}")
+print(f"X_train Shape: {X_train.shape}")
+
+print(f"X_test Shape: {X_test.shape}")
 
 
 # ============================================
 # HANDLE CLASS IMBALANCE
 # ============================================
 
-print("Applying SMOTE...")
+print("\n====================================")
+print("APPLYING SMOTE")
+print("====================================")
 
-smote = SMOTE(random_state=42)
+smote = SMOTE(
+    random_state=42
+)
 
 X_train_smote, y_train_smote = smote.fit_resample(
     X_train,
     y_train
 )
 
-print("SMOTE completed")
+print("SMOTE applied successfully")
 
-print("\nBalanced class distribution:")
+print("\nBalanced Class Distribution:")
 
-print(y_train_smote.value_counts())
+print(
+    y_train_smote.value_counts()
+)
 
 
 # ============================================
 # FEATURE SCALING
 # ============================================
 
-print("\nApplying StandardScaler...")
+print("\n====================================")
+print("FEATURE SCALING")
+print("====================================")
 
 scaler = StandardScaler()
 
@@ -134,6 +252,10 @@ print("Feature scaling completed")
 # CALCULATE CLASS WEIGHT
 # ============================================
 
+print("\n====================================")
+print("CALCULATING CLASS WEIGHT")
+print("====================================")
+
 fraud_count = y_train.value_counts()[1]
 
 non_fraud_count = y_train.value_counts()[0]
@@ -142,14 +264,18 @@ scale_pos_weight = (
     non_fraud_count / fraud_count
 )
 
-print(f"\nScale Pos Weight: {scale_pos_weight:.2f}")
+print(
+    f"Scale Pos Weight: {scale_pos_weight:.2f}"
+)
 
 
 # ============================================
-# TRAIN IMPROVED XGBOOST MODEL
+# TRAIN XGBOOST MODEL
 # ============================================
 
-print("\nTraining Improved XGBoost Model...")
+print("\n====================================")
+print("TRAINING XGBOOST MODEL")
+print("====================================")
 
 model = XGBClassifier(
     n_estimators=300,
@@ -168,24 +294,30 @@ model.fit(
     y_train_smote
 )
 
-print("XGBoost model trained successfully")
+print("Model trained successfully")
 
 
 # ============================================
 # MAKE PREDICTIONS
 # ============================================
 
-print("\nMaking predictions...")
+print("\n====================================")
+print("MAKING PREDICTIONS")
+print("====================================")
 
-predictions = model.predict(X_test)
+predictions = model.predict(
+    X_test
+)
 
-probabilities = model.predict_proba(X_test)[:,1]
+probabilities = model.predict_proba(
+    X_test
+)[:,1]
 
 print("Predictions completed")
 
 
 # ============================================
-# EVALUATE MODEL
+# MODEL EVALUATION
 # ============================================
 
 print("\n====================================")
@@ -218,9 +350,13 @@ roc_auc = roc_auc_score(
 )
 
 print(f"\nAccuracy  : {accuracy:.4f}")
+
 print(f"Precision : {precision:.4f}")
+
 print(f"Recall    : {recall:.4f}")
+
 print(f"F1 Score  : {f1:.4f}")
+
 print(f"ROC-AUC   : {roc_auc:.4f}")
 
 
@@ -244,19 +380,21 @@ print(
 # SAVE MODEL
 # ============================================
 
-print("\nSaving model and scaler...")
+print("\n====================================")
+print("SAVING MODEL FILES")
+print("====================================")
 
 joblib.dump(
     model,
-    r"C:\Users\Dell\Desktop\classification project\financial-fraud-detection\models\fraud_detection_model.pkl"
+    model_save_path
 )
 
 joblib.dump(
     scaler,
-    r"C:\Users\Dell\Desktop\classification project\financial-fraud-detection\models\scaler.pkl"
+    scaler_save_path
 )
 
-print("Model saved successfully")
+print("Model files saved successfully")
 
 
 # ============================================
@@ -265,12 +403,12 @@ print("Model saved successfully")
 
 joblib.dump(
     X_test,
-    r"C:\Users\Dell\Desktop\classification project\financial-fraud-detection\data\processed\X_test.pkl"
+    x_test_path
 )
 
 joblib.dump(
     y_test,
-    r"C:\Users\Dell\Desktop\classification project\financial-fraud-detection\data\processed\y_test.pkl"
+    y_test_path
 )
 
 print("Test files saved successfully")
