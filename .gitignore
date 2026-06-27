@@ -35,9 +35,16 @@ data/processed/
 # MODEL FILES
 # ============================================
 
-
 models/*.joblib
 models/*.h5
+models/best_fraud_model.pkl
+
+# ============================================
+# CATBOOST TRAINING ARTIFACTS
+# ============================================
+
+catboost_info/
+**/catboost_info/
 
 
 # ============================================

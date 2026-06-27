@@ -1,65 +1,22 @@
-# ============================================
-# IMPORT LIBRARIES
-# ============================================
-
-import streamlit as st
-import pandas as pd
-import numpy as np
-import joblib
-import sys
 import os
+import sys
 
+import joblib
+import streamlit as st
 
-# ============================================
-# BASE DIRECTORY
-# ============================================
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(os.path.join(BASE_DIR, "src"))
 
-BASE_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..')
-)
-
-
-# ============================================
-# ADD SRC PATH
-# ============================================
-
-SRC_PATH = os.path.join(
-    BASE_DIR,
-    'src'
-)
-
-sys.path.append(SRC_PATH)
-
-
-# ============================================
-# IMPORT PREPROCESSING FUNCTION
-# ============================================
-
-from data_preprocessing import preprocess_data
-
-
-# ============================================
-# PAGE CONFIG
-# ============================================
+from predict import predict_transaction  # noqa: E402
 
 st.set_page_config(
     page_title="Financial Fraud Detection",
     page_icon="💳",
-    layout="centered"
+    layout="centered",
 )
-
-
-# ============================================
-# CUSTOM CSS
-# ============================================
 
 st.markdown("""
 <style>
-
-.main {
-    background-color: #f5f7fa;
-}
-
 .stButton>button {
     width: 100%;
     border-radius: 10px;
@@ -67,379 +24,129 @@ st.markdown("""
     font-size: 18px;
     font-weight: bold;
 }
-
-.stNumberInput input {
-    border-radius: 8px;
-}
-
-.stSelectbox div[data-baseweb="select"] {
-    border-radius: 8px;
-}
-
 </style>
 """, unsafe_allow_html=True)
 
 
-# ============================================
-# LOAD MODEL FILES
-# ============================================
-
-model_path = os.path.join(
-    BASE_DIR,
-    'models',
-    'fraud_detection_model.pkl'
-)
-
-scaler_path = os.path.join(
-    BASE_DIR,
-    'models',
-    'scaler.pkl'
-)
-
-model = joblib.load(model_path)
-
-scaler = joblib.load(scaler_path)
+@st.cache_resource
+def load_model():
+    model_path = os.path.join(BASE_DIR, "models", "fraud_detection_model.pkl")
+    return joblib.load(model_path)
 
 
-# ============================================
-# SIDEBAR
-# ============================================
+model = load_model()
 
-st.sidebar.title("📊 Project Information")
-
+st.sidebar.title("Project Information")
 st.sidebar.markdown("""
-## ML Model
-- XGBoost Classifier
+**Model:** XGBoost Classifier
 
-## Techniques Used
-- SMOTE
-- Feature Engineering
-- StandardScaler
-- Ensemble Learning
-- Threshold Tuning
+**Techniques:**
+- SMOTE (training set only)
+- Balance-difference feature engineering
+- Threshold tuning
 
-## Evaluation Metrics
-- ROC-AUC
-- Precision
-- Recall
-- F1-Score
+**Key metrics (held-out test set):**
+- PR-AUC (primary — imbalanced data)
+- ROC-AUC, Precision, Recall, F1
 
-## Supported Transactions
-- CASH_IN
-- CASH_OUT
-- DEBIT
-- PAYMENT
-- TRANSFER
+**Supported transaction types:**
+CASH_IN · CASH_OUT · DEBIT · PAYMENT · TRANSFER
 """)
-
 st.sidebar.markdown("---")
+st.sidebar.info("Portfolio project — Data Scientist career transition")
 
-st.sidebar.success(
-    "Built for Data Scientist Career Transition"
+st.title("Financial Fraud Detection System")
+st.markdown(
+    "Real-time fraud probability scoring powered by XGBoost trained "
+    "on the [PaySim synthetic dataset](https://www.kaggle.com/datasets/ealaxi/paysim1)."
 )
 
-
-# ============================================
-# MAIN TITLE
-# ============================================
-
-st.title("💳 Financial Fraud Detection System")
-
-
-# ============================================
-# PROJECT DESCRIPTION
-# ============================================
-
-st.markdown("""
-## AI-Powered Banking Fraud Detection
-
-This machine learning application predicts whether a financial transaction is fraudulent.
-
-### Features
-- Real-time fraud prediction
-- Fraud probability scoring
-- Risk classification
-- XGBoost ML model
-- Feature-engineered fraud detection pipeline
-
-This project demonstrates an end-to-end Machine Learning workflow for fraud analytics.
-""")
-
-
-# ============================================
-# USER INPUT SECTION
-# ============================================
-
-st.header("📝 Enter Transaction Details")
+st.header("Enter Transaction Details")
 
 col1, col2 = st.columns(2)
 
 with col1:
-
-    step = st.number_input(
-        "Transaction Step (Hour)",
-        min_value=1,
-        value=1
-    )
-
+    step = st.number_input("Transaction Step (Hour)", min_value=1, value=1)
     transaction_type = st.selectbox(
         "Transaction Type",
-        ['CASH_IN', 'CASH_OUT', 'DEBIT', 'PAYMENT', 'TRANSFER']
+        ["CASH_IN", "CASH_OUT", "DEBIT", "PAYMENT", "TRANSFER"],
     )
-
-    amount = st.number_input(
-        "Transaction Amount",
-        min_value=0.0,
-        value=1000.0
-    )
-
-    oldbalanceOrg = st.number_input(
-        "Sender Old Balance",
-        min_value=0.0,
-        value=5000.0
-    )
+    amount = st.number_input("Transaction Amount ($)", min_value=0.0, value=1_000.0)
+    oldbalanceOrg = st.number_input("Sender Old Balance ($)", min_value=0.0, value=5_000.0)
 
 with col2:
+    newbalanceOrig = st.number_input("Sender New Balance ($)", min_value=0.0, value=4_000.0)
+    oldbalanceDest = st.number_input("Receiver Old Balance ($)", min_value=0.0, value=0.0)
+    newbalanceDest = st.number_input("Receiver New Balance ($)", min_value=0.0, value=1_000.0)
+    isFlaggedFraud = st.selectbox("System Flagged?", [0, 1])
 
-    newbalanceOrig = st.number_input(
-        "Sender New Balance",
-        min_value=0.0,
-        value=4000.0
-    )
-
-    oldbalanceDest = st.number_input(
-        "Receiver Old Balance",
-        min_value=0.0,
-        value=0.0
-    )
-
-    newbalanceDest = st.number_input(
-        "Receiver New Balance",
-        min_value=0.0,
-        value=1000.0
-    )
-
-    isFlaggedFraud = st.selectbox(
-        "Flagged Fraud",
-        [0, 1]
-    )
-
-
-# ============================================
-# PREDICTION BUTTON
-# ============================================
-
-if st.button("🔍 Predict Fraud"):
-
-    # ========================================
-    # CREATE INPUT DATAFRAME
-    # ========================================
-
-    input_data = {
-        'step': [step],
-        'type': [transaction_type],
-        'amount': [amount],
-        'nameOrig': ['C12345'],
-        'oldbalanceOrg': [oldbalanceOrg],
-        'newbalanceOrig': [newbalanceOrig],
-        'nameDest': ['M67890'],
-        'oldbalanceDest': [oldbalanceDest],
-        'newbalanceDest': [newbalanceDest],
-        'isFlaggedFraud': [isFlaggedFraud]
+if st.button("Predict Fraud"):
+    transaction = {
+        "step": step,
+        "type": transaction_type,
+        "amount": amount,
+        "nameOrig": "C00000",
+        "oldbalanceOrg": oldbalanceOrg,
+        "newbalanceOrig": newbalanceOrig,
+        "nameDest": "M00000",
+        "oldbalanceDest": oldbalanceDest,
+        "newbalanceDest": newbalanceDest,
+        "isFlaggedFraud": isFlaggedFraud,
     }
 
-    df = pd.DataFrame(input_data)
-
-    # ========================================
-    # PREPROCESS DATA
-    # ========================================
-
-    df = preprocess_data(df)
-
-    # ========================================
-    # ALIGN FEATURES
-    # ========================================
-
-    model_features = model.get_booster().feature_names
-
-    for col in model_features:
-
-        if col not in df.columns:
-
-            df[col] = 0
-
-    df = df[model_features]
-
-    # ========================================
-    # SCALE DATA
-    # ========================================
-
-    scaled_data = scaler.transform(df)
-
-    # ========================================
-    # FRAUD PROBABILITY
-    # ========================================
-
-    probability = model.predict_proba(df)[:,1]
-
-    fraud_probability = probability[0]
-
-    # ========================================
-    # CUSTOM THRESHOLD
-    # ========================================
-
-    threshold = 0.10
-
-    prediction = int(
-        fraud_probability >= threshold
-    )
-
-    # ========================================
-    # CONVERT TO PERCENTAGE
-    # ========================================
-
-    fraud_probability_percent = (
-        fraud_probability * 100
-    )
-
-    # ========================================
-    # DISPLAY RESULTS
-    # ========================================
+    result = predict_transaction(transaction, model)
+    prob_pct = result["fraud_probability"] * 100
 
     st.markdown("---")
+    st.subheader("Prediction Result")
 
-    st.subheader("📈 Prediction Result")
-
-    if prediction == 1:
-
-        st.error("⚠️ Fraudulent Transaction Detected")
-
+    if result["is_fraud"]:
+        st.error("Fraudulent Transaction Detected")
     else:
+        st.success("Legitimate Transaction")
 
-        st.success("✅ Legitimate Transaction")
+    st.write(f"**Fraud Probability:** {prob_pct:.2f}%")
+    st.progress(min(int(prob_pct), 100))
 
-    # ========================================
-    # FRAUD PROBABILITY DISPLAY
-    # ========================================
-
-    st.write(
-        f"### Fraud Probability: {fraud_probability_percent:.2f}%"
-    )
-
-    st.progress(
-        int(fraud_probability_percent)
-    )
-
-    # ========================================
-    # RISK LEVEL
-    # ========================================
-
-    if prediction == 1:
-
-        if fraud_probability_percent > 70:
-
-            risk_level = "🔴 High Risk Transaction"
-
-            st.error(risk_level)
-
-            risk_level_summary = "High Risk"
-
-        else:
-
-            risk_level = "🟠 Medium Risk Transaction"
-
-            st.warning(risk_level)
-
-            risk_level_summary = "Medium Risk"
-
+    risk = result["risk_level"]
+    if risk == "High":
+        st.error(f"Risk Level: {risk}")
+    elif risk == "Medium":
+        st.warning(f"Risk Level: {risk}")
     else:
+        st.success(f"Risk Level: {risk}")
 
-        risk_level = "🟢 Low Risk Transaction"
-
-        st.success(risk_level)
-
-        risk_level_summary = "Low Risk"
-
-    # ========================================
-    # PREDICTION SUMMARY TABLE
-    # ========================================
-
-    st.subheader("📋 Transaction Summary")
-
-    result_df = pd.DataFrame({
-        'Metric': [
-            'Transaction Type',
-            'Transaction Amount',
-            'Fraud Probability',
-            'Threshold Used',
-            'Risk Level'
-        ],
-        'Value': [
+    st.subheader("Transaction Summary")
+    st.table({
+        "Field": ["Type", "Amount", "Fraud Probability", "Threshold", "Risk Level"],
+        "Value": [
             transaction_type,
             f"${amount:,.2f}",
-            f"{fraud_probability_percent:.2f}%",
-            threshold,
-            risk_level_summary
-        ]
+            f"{prob_pct:.2f}%",
+            "0.30",
+            risk,
+        ],
     })
 
-    st.table(result_df)
-
-    # ========================================
-    # MODEL INSIGHTS
-    # ========================================
-
-    st.subheader("🧠 Fraud Insights")
-
-    if amount > 200000:
-
-        st.warning(
-            "Large transaction amount detected."
-        )
-
-    if transaction_type in ['TRANSFER', 'CASH_OUT']:
-
-        st.warning(
-            "Transaction type commonly associated with fraud."
-        )
-
+    st.subheader("Fraud Pattern Flags")
+    flags = []
+    if amount > 200_000:
+        flags.append("Large transaction amount (> $200,000)")
+    if transaction_type in ("TRANSFER", "CASH_OUT"):
+        flags.append("Transaction type strongly associated with fraud (TRANSFER / CASH_OUT)")
     if oldbalanceOrg > 0 and newbalanceOrig == 0:
-
-        st.warning(
-            "Sender balance became zero after transaction."
-        )
-
+        flags.append("Sender balance drained to zero — common in account takeover fraud")
     if isFlaggedFraud == 1:
+        flags.append("Transaction pre-flagged by the payment system")
 
-        st.warning(
-            "Transaction already flagged as suspicious."
-        )
-
-
-# ============================================
-# FOOTER
-# ============================================
+    if flags:
+        for flag in flags:
+            st.warning(flag)
+    else:
+        st.info("No specific fraud patterns detected in this transaction.")
 
 st.markdown("---")
-
-st.markdown("""
-### 🚀 Tech Stack
-
-- Python
-- XGBoost
-- Scikit-learn
-- Streamlit
-- Pandas
-- SMOTE
-
-### 📌 Project Highlights
-
-- End-to-End ML Pipeline
-- Imbalanced Classification
-- Fraud Detection System
-- Real-Time Prediction
-- Explainable AI Ready
-- Production-Style Architecture
-
-Built with Machine Learning for Financial Fraud Analytics.
-""")
+st.caption(
+    "XGBoost · scikit-learn · imbalanced-learn · Streamlit · SHAP  |  "
+    "Dataset: PaySim Synthetic Financial Transactions"
+)

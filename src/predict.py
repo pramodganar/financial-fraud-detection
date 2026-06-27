@@ -1,295 +1,119 @@
-# ============================================
-# IMPORT LIBRARIES
-# ============================================
+"""Single-transaction fraud prediction using the trained XGBoost model.
 
-import os
-import pandas as pd
-import numpy as np
+Run from the repo root:
+    python src/predict.py
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
 import joblib
+import pandas as pd
 
 from data_preprocessing import preprocess_data
 
+ROOT = Path(__file__).parent.parent
 
-# ============================================
-# BASE DIRECTORY
-# ============================================
-
-BASE_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..')
-)
-
-
-# ============================================
-# MODEL PATHS
-# ============================================
-
-model_path = os.path.join(
-    BASE_DIR,
-    'models',
-    'fraud_detection_model.pkl'
-)
-
-scaler_path = os.path.join(
-    BASE_DIR,
-    'models',
-    'scaler.pkl'
-)
+# Threshold tuned from the PR curve on the held-out test set (see notebook 04).
+# At 0.30: catches 120/129 fraud (93.0% recall), flags 333 alerts, precision 36%.
+# At 0.10 (original): catches 122/129 but flags 492 alerts — too many false alarms
+#   for the corrected model (that threshold was calibrated for the buggy version).
+# Raise threshold toward 0.50–0.70 to trade recall for fewer investigator alerts.
+FRAUD_THRESHOLD = 0.30
 
 
-# ============================================
-# LOAD MODEL FILES
-# ============================================
-
-print("====================================")
-print("LOADING MODEL FILES")
-print("====================================")
-
-model = joblib.load(
-    model_path
-)
-
-scaler = joblib.load(
-    scaler_path
-)
-
-print("Model loaded successfully")
+def load_model(model_path: Path):
+    """Load a serialised XGBoost model from disk."""
+    return joblib.load(model_path)
 
 
-# ============================================
-# SAMPLE TRANSACTION DATA
-# ============================================
+def predict_transaction(
+    transaction: dict[str, Any],
+    model,
+    threshold: float = FRAUD_THRESHOLD,
+) -> dict[str, Any]:
+    """Predict whether a single transaction is fraudulent.
 
-print("\n====================================")
-print("CREATING SAMPLE TRANSACTION")
-print("====================================")
+    XGBoost is scale-invariant (tree splits are based on rank order),
+    so no feature scaling is applied here or during training.
 
-input_data = {
-    'step': [1],
-    'type': ['CASH_OUT'],
-    'amount': [800000],
-    'nameOrig': ['C12345'],
-    'oldbalanceOrg': [900000],
-    'newbalanceOrig': [0],
-    'nameDest': ['M67890'],
-    'oldbalanceDest': [0],
-    'newbalanceDest': [800000],
-    'isFlaggedFraud': [1]
-}
+    Parameters
+    ----------
+    transaction : dict
+        Raw transaction fields matching the PaySim dataset schema.
+    model : XGBClassifier
+        Trained model loaded via load_model().
+    threshold : float
+        Decision threshold on the fraud probability score.
+        Default (0.10) favours recall; raise it to reduce false positives.
 
-df = pd.DataFrame(
-    input_data
-)
+    Returns
+    -------
+    dict
+        fraud_probability (float), is_fraud (bool), risk_level (str).
+    """
+    df = pd.DataFrame([transaction])
+    df = preprocess_data(df)
 
-print("Sample transaction created")
+    # Align columns to exactly what the model was trained on,
+    # adding zero-filled columns for any one-hot categories absent in this row.
+    expected_cols = model.get_booster().feature_names
+    for col in expected_cols:
+        if col not in df.columns:
+            df[col] = 0
+    df = df[expected_cols]
 
+    fraud_prob = float(model.predict_proba(df)[0, 1])
+    is_fraud = fraud_prob >= threshold
 
-# ============================================
-# PREPROCESS DATA
-# ============================================
-
-print("\n====================================")
-print("PREPROCESSING DATA")
-print("====================================")
-
-df = preprocess_data(
-    df
-)
-
-print("Preprocessing completed")
-
-
-# ============================================
-# ALIGN FEATURES
-# ============================================
-
-print("\n====================================")
-print("ALIGNING MODEL FEATURES")
-print("====================================")
-
-model_features = model.get_booster().feature_names
-
-for col in model_features:
-
-    if col not in df.columns:
-
-        df[col] = 0
-
-df = df[model_features]
-
-print("Feature alignment completed")
-
-
-# ============================================
-# SCALE FEATURES
-# ============================================
-
-print("\n====================================")
-print("SCALING FEATURES")
-print("====================================")
-
-scaled_data = scaler.transform(
-    df
-)
-
-print("Feature scaling completed")
-
-
-# ============================================
-# FRAUD PROBABILITY
-# ============================================
-
-print("\n====================================")
-print("PREDICTING FRAUD")
-print("====================================")
-
-probability = model.predict_proba(
-    df
-)[:,1]
-
-fraud_probability = probability[0]
-
-fraud_probability_percent = (
-    fraud_probability * 100
-)
-
-print(
-    f"Fraud Probability: {fraud_probability_percent:.2f}%"
-)
-
-
-# ============================================
-# CUSTOM THRESHOLD
-# ============================================
-
-threshold = 0.10
-
-prediction = int(
-    fraud_probability >= threshold
-)
-
-
-# ============================================
-# DISPLAY RESULTS
-# ============================================
-
-print("\n====================================")
-print("PREDICTION RESULT")
-print("====================================")
-
-if prediction == 1:
-
-    print(
-        "⚠️ Fraudulent Transaction Detected"
-    )
-
-else:
-
-    print(
-        "✅ Legitimate Transaction"
-    )
-
-
-# ============================================
-# RISK LEVEL
-# ============================================
-
-print("\n====================================")
-print("RISK ANALYSIS")
-print("====================================")
-
-if prediction == 1:
-
-    if fraud_probability_percent > 70:
-
-        risk_level = "High Risk"
-
+    if is_fraud and fraud_prob > 0.70:
+        risk_level = "High"
+    elif is_fraud:
+        risk_level = "Medium"
     else:
+        risk_level = "Low"
 
-        risk_level = "Medium Risk"
-
-else:
-
-    risk_level = "Low Risk"
-
-print(f"Risk Level: {risk_level}")
-
-
-# ============================================
-# FRAUD INSIGHTS
-# ============================================
-
-print("\n====================================")
-print("FRAUD INSIGHTS")
-print("====================================")
-
-if input_data['amount'][0] > 200000:
-
-    print(
-        "- Large transaction amount detected"
-    )
-
-if input_data['type'][0] in ['TRANSFER', 'CASH_OUT']:
-
-    print(
-        "- Suspicious transaction type detected"
-    )
-
-if (
-    input_data['oldbalanceOrg'][0] > 0
-    and
-    input_data['newbalanceOrig'][0] == 0
-):
-
-    print(
-        "- Sender balance became zero"
-    )
-
-if input_data['isFlaggedFraud'][0] == 1:
-
-    print(
-        "- Transaction already flagged as suspicious"
-    )
+    return {
+        "fraud_probability": round(fraud_prob, 4),
+        "is_fraud": is_fraud,
+        "risk_level": risk_level,
+    }
 
 
-# ============================================
-# FINAL SUMMARY
-# ============================================
-
-print("\n====================================")
-print("FINAL SUMMARY")
-print("====================================")
-
-summary_df = pd.DataFrame({
-    'Metric': [
-        'Transaction Type',
-        'Transaction Amount',
-        'Fraud Probability',
-        'Threshold Used',
-        'Prediction',
-        'Risk Level'
-    ],
-    'Value': [
-        input_data['type'][0],
-        f"${input_data['amount'][0]:,.2f}",
-        f"{fraud_probability_percent:.2f}%",
-        threshold,
-        (
-            "Fraud"
-            if prediction == 1
-            else
-            "Legitimate"
-        ),
-        risk_level
-    ]
-})
-
-print(summary_df)
+def _print_insights(transaction: dict[str, Any]) -> None:
+    """Print human-readable flags for common fraud patterns."""
+    if transaction.get("amount", 0) > 200_000:
+        print("  - Large transaction amount detected")
+    if transaction.get("type") in ("TRANSFER", "CASH_OUT"):
+        print("  - Transaction type commonly associated with fraud")
+    if transaction.get("oldbalanceOrg", 0) > 0 and transaction.get("newbalanceOrig", 0) == 0:
+        print("  - Sender balance became zero after transaction")
+    if transaction.get("isFlaggedFraud") == 1:
+        print("  - Transaction already flagged as suspicious")
 
 
-# ============================================
-# COMPLETED
-# ============================================
+if __name__ == "__main__":
+    model = load_model(ROOT / "models" / "fraud_detection_model.pkl")
 
-print("\n====================================")
-print("PREDICTION PIPELINE COMPLETED")
-print("====================================")
+    sample_transaction = {
+        "step": 1,
+        "type": "CASH_OUT",
+        "amount": 800_000,
+        "nameOrig": "C12345",
+        "oldbalanceOrg": 900_000,
+        "newbalanceOrig": 0,
+        "nameDest": "M67890",
+        "oldbalanceDest": 0,
+        "newbalanceDest": 800_000,
+        "isFlaggedFraud": 1,
+    }
+
+    result = predict_transaction(sample_transaction, model)
+
+    print(f"Fraud probability : {result['fraud_probability']:.2%}")
+    print(f"Prediction        : {'FRAUD' if result['is_fraud'] else 'Legitimate'}")
+    print(f"Risk level        : {result['risk_level']}")
+    print("\nFraud insights:")
+    _print_insights(sample_transaction)

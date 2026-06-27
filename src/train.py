@@ -1,423 +1,149 @@
-# ============================================
-# IMPORT LIBRARIES
-# ============================================
+"""XGBoost fraud detection training pipeline.
 
+Run from the repo root:
+    python src/train.py
+"""
+
+import logging
 import os
-import pandas as pd
-import numpy as np
-import joblib
+from pathlib import Path
 
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+import joblib
+import numpy as np
+import pandas as pd
+from imblearn.over_sampling import SMOTE
 from sklearn.metrics import (
+    average_precision_score,
     classification_report,
-    accuracy_score,
+    f1_score,
     precision_score,
     recall_score,
-    f1_score,
-    roc_auc_score
+    roc_auc_score,
 )
-
-from imblearn.over_sampling import SMOTE
-
+from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier
 
 from data_preprocessing import preprocess_data
 
-
-# ============================================
-# BASE DIRECTORY
-# ============================================
-
-BASE_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..')
-)
-
-
-# ============================================
-# DATASET PATH
-# ============================================
-
-dataset_path = os.path.join(
-    BASE_DIR,
-    'data',
-    'raw',
-    'fraud_detection.csv'
-)
-
-
-# ============================================
-# MODEL SAVE PATHS
-# ============================================
-
-model_save_path = os.path.join(
-    BASE_DIR,
-    'models',
-    'fraud_detection_model.pkl'
-)
-
-scaler_save_path = os.path.join(
-    BASE_DIR,
-    'models',
-    'scaler.pkl'
-)
-
-
-# ============================================
-# TEST FILE SAVE PATHS
-# ============================================
-
-x_test_path = os.path.join(
-    BASE_DIR,
-    'data',
-    'processed',
-    'X_test.pkl'
-)
-
-y_test_path = os.path.join(
-    BASE_DIR,
-    'data',
-    'processed',
-    'y_test.pkl'
-)
-
-
-# ============================================
-# CREATE REQUIRED DIRECTORIES
-# ============================================
-
-os.makedirs(
-    os.path.join(BASE_DIR, 'models'),
-    exist_ok=True
-)
-
-os.makedirs(
-    os.path.join(BASE_DIR, 'data', 'processed'),
-    exist_ok=True
-)
-
-
-# ============================================
-# LOAD DATASET
-# ============================================
-
-print("====================================")
-print("LOADING DATASET")
-print("====================================")
-
-df = pd.read_csv(dataset_path)
-
-print("Dataset loaded successfully")
-
-print(f"Dataset Shape: {df.shape}")
-
-
-# ============================================
-# SAMPLE DATA
-# ============================================
-
-print("\n====================================")
-print("SAMPLING DATA")
-print("====================================")
-
-df = df.sample(
-    500000,
-    random_state=42
-)
-
-print(f"Sample Dataset Shape: {df.shape}")
-
-
-# ============================================
-# PREPROCESS DATA
-# ============================================
-
-print("\n====================================")
-print("PREPROCESSING DATA")
-print("====================================")
-
-df = preprocess_data(df)
-
-print("Preprocessing completed")
-
-
-# ============================================
-# CHECK MISSING VALUES
-# ============================================
-
-print("\nChecking missing values...")
-
-missing_values = df.isnull().sum()
-
-print(missing_values[missing_values > 0])
-
-df = df.fillna(0)
-
-print("Missing values handled")
-
-
-# ============================================
-# SPLIT FEATURES & TARGET
-# ============================================
-
-print("\n====================================")
-print("FEATURES & TARGET")
-print("====================================")
-
-X = df.drop(
-    'isFraud',
-    axis=1
-)
-
-y = df['isFraud']
-
-print("Features and target separated")
-
-print(f"X Shape: {X.shape}")
-
-print(f"y Shape: {y.shape}")
-
-
-# ============================================
-# TRAIN TEST SPLIT
-# ============================================
-
-print("\n====================================")
-print("TRAIN TEST SPLIT")
-print("====================================")
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X,
-    y,
-    test_size=0.2,
-    stratify=y,
-    random_state=42
-)
-
-print("Train-test split completed")
-
-print(f"X_train Shape: {X_train.shape}")
-
-print(f"X_test Shape: {X_test.shape}")
-
-
-# ============================================
-# HANDLE CLASS IMBALANCE
-# ============================================
-
-print("\n====================================")
-print("APPLYING SMOTE")
-print("====================================")
-
-smote = SMOTE(
-    random_state=42
-)
-
-X_train_smote, y_train_smote = smote.fit_resample(
-    X_train,
-    y_train
-)
-
-print("SMOTE applied successfully")
-
-print("\nBalanced Class Distribution:")
-
-print(
-    y_train_smote.value_counts()
-)
-
-
-# ============================================
-# FEATURE SCALING
-# ============================================
-
-print("\n====================================")
-print("FEATURE SCALING")
-print("====================================")
-
-scaler = StandardScaler()
-
-X_train_scaled = scaler.fit_transform(
-    X_train_smote
-)
-
-X_test_scaled = scaler.transform(
-    X_test
-)
-
-print("Feature scaling completed")
-
-
-# ============================================
-# CALCULATE CLASS WEIGHT
-# ============================================
-
-print("\n====================================")
-print("CALCULATING CLASS WEIGHT")
-print("====================================")
-
-fraud_count = y_train.value_counts()[1]
-
-non_fraud_count = y_train.value_counts()[0]
-
-scale_pos_weight = (
-    non_fraud_count / fraud_count
-)
-
-print(
-    f"Scale Pos Weight: {scale_pos_weight:.2f}"
-)
-
-
-# ============================================
-# TRAIN XGBOOST MODEL
-# ============================================
-
-print("\n====================================")
-print("TRAINING XGBOOST MODEL")
-print("====================================")
-
-model = XGBClassifier(
-    n_estimators=300,
-    max_depth=8,
-    learning_rate=0.05,
-    subsample=0.8,
-    colsample_bytree=0.8,
-    scale_pos_weight=scale_pos_weight,
-    random_state=42,
-    eval_metric='logloss',
-    n_jobs=-1
-)
-
-model.fit(
-    X_train_smote,
-    y_train_smote
-)
-
-print("Model trained successfully")
-
-
-# ============================================
-# MAKE PREDICTIONS
-# ============================================
-
-print("\n====================================")
-print("MAKING PREDICTIONS")
-print("====================================")
-
-predictions = model.predict(
-    X_test
-)
-
-probabilities = model.predict_proba(
-    X_test
-)[:,1]
-
-print("Predictions completed")
-
-
-# ============================================
-# MODEL EVALUATION
-# ============================================
-
-print("\n====================================")
-print("MODEL EVALUATION")
-print("====================================")
-
-accuracy = accuracy_score(
-    y_test,
-    predictions
-)
-
-precision = precision_score(
-    y_test,
-    predictions
-)
-
-recall = recall_score(
-    y_test,
-    predictions
-)
-
-f1 = f1_score(
-    y_test,
-    predictions
-)
-
-roc_auc = roc_auc_score(
-    y_test,
-    probabilities
-)
-
-print(f"\nAccuracy  : {accuracy:.4f}")
-
-print(f"Precision : {precision:.4f}")
-
-print(f"Recall    : {recall:.4f}")
-
-print(f"F1 Score  : {f1:.4f}")
-
-print(f"ROC-AUC   : {roc_auc:.4f}")
-
-
-# ============================================
-# CLASSIFICATION REPORT
-# ============================================
-
-print("\n====================================")
-print("CLASSIFICATION REPORT")
-print("====================================")
-
-print(
-    classification_report(
-        y_test,
-        predictions
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+log = logging.getLogger(__name__)
+
+ROOT = Path(__file__).parent.parent
+RANDOM_STATE = 42
+SAMPLE_SIZE = 500_000
+TEST_SIZE = 0.2
+
+
+def load_data(path: Path) -> pd.DataFrame:
+    """Sample 500k rows from the full dataset for tractable training."""
+    log.info("Loading dataset from %s", path)
+    df = pd.read_csv(path)
+    log.info("Full dataset shape: %s", df.shape)
+    sampled = df.sample(SAMPLE_SIZE, random_state=RANDOM_STATE)
+    log.info("Sample shape: %s", sampled.shape)
+    return sampled
+
+
+def build_model() -> XGBClassifier:
+    """Return the XGBoost classifier with tuned hyperparameters.
+
+    Note: scale_pos_weight is intentionally omitted because SMOTE is applied
+    to the training set beforehand, already balancing the classes 1:1.
+    Using both SMOTE and scale_pos_weight double-corrects for imbalance,
+    over-aggressively predicting fraud and destroying precision.
+    """
+    return XGBClassifier(
+        n_estimators=300,
+        max_depth=8,
+        learning_rate=0.05,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        random_state=RANDOM_STATE,
+        eval_metric="logloss",
+        n_jobs=-1,
     )
-)
 
 
-# ============================================
-# SAVE MODEL
-# ============================================
+def evaluate(
+    y_true: pd.Series,
+    y_pred: np.ndarray,
+    y_prob: np.ndarray,
+) -> dict:
+    """Compute classification metrics suitable for imbalanced fraud data.
 
-print("\n====================================")
-print("SAVING MODEL FILES")
-print("====================================")
-
-joblib.dump(
-    model,
-    model_save_path
-)
-
-joblib.dump(
-    scaler,
-    scaler_save_path
-)
-
-print("Model files saved successfully")
-
-
-# ============================================
-# SAVE TEST FILES
-# ============================================
-
-joblib.dump(
-    X_test,
-    x_test_path
-)
-
-joblib.dump(
-    y_test,
-    y_test_path
-)
-
-print("Test files saved successfully")
+    PR-AUC (average precision) is the primary metric here because:
+    - Fraud is rare (~0.13% of transactions).
+    - ROC-AUC can be misleadingly optimistic on skewed classes.
+    - PR-AUC penalises false positives more honestly.
+    """
+    return {
+        "precision": precision_score(y_true, y_pred),
+        "recall": recall_score(y_true, y_pred),
+        "f1": f1_score(y_true, y_pred),
+        "roc_auc": roc_auc_score(y_true, y_prob),
+        "pr_auc": average_precision_score(y_true, y_prob),
+    }
 
 
-# ============================================
-# FINAL MESSAGE
-# ============================================
+def main() -> None:
+    data_path = ROOT / "data" / "raw" / "fraud_detection.csv"
+    model_path = ROOT / "models" / "fraud_detection_model.pkl"
+    x_test_path = ROOT / "data" / "processed" / "X_test.pkl"
+    y_test_path = ROOT / "data" / "processed" / "y_test.pkl"
 
-print("\n====================================")
-print("TRAINING PIPELINE COMPLETED")
-print("====================================")
+    (ROOT / "models").mkdir(exist_ok=True)
+    (ROOT / "data" / "processed").mkdir(parents=True, exist_ok=True)
+
+    df = load_data(data_path)
+
+    log.info("Preprocessing data...")
+    df = preprocess_data(df)
+
+    X = df.drop("isFraud", axis=1)
+    y = df["isFraud"]
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=TEST_SIZE, stratify=y, random_state=RANDOM_STATE
+    )
+    log.info("Train shape: %s  |  Test shape: %s", X_train.shape, X_test.shape)
+    log.info("Fraud rate in test set: %.4f%%", y_test.mean() * 100)
+
+    log.info("Applying SMOTE to training set only...")
+    smote = SMOTE(random_state=RANDOM_STATE)
+    X_train_bal, y_train_bal = smote.fit_resample(X_train, y_train)
+    log.info("Balanced class distribution:\n%s", y_train_bal.value_counts().to_string())
+
+    log.info("Training XGBoost model...")
+    model = build_model()
+    model.fit(X_train_bal, y_train_bal)
+
+    y_pred = model.predict(X_test)
+    y_prob = model.predict_proba(X_test)[:, 1]
+
+    metrics = evaluate(y_test, y_pred, y_prob)
+    log.info(
+        "\nTest-set metrics (default 0.5 threshold):\n"
+        "  Precision : %.4f\n"
+        "  Recall    : %.4f\n"
+        "  F1        : %.4f\n"
+        "  ROC-AUC   : %.4f\n"
+        "  PR-AUC    : %.4f  <-- primary metric for imbalanced fraud data",
+        metrics["precision"],
+        metrics["recall"],
+        metrics["f1"],
+        metrics["roc_auc"],
+        metrics["pr_auc"],
+    )
+    log.info("\nClassification report:\n%s", classification_report(y_test, y_pred))
+
+    joblib.dump(model, model_path)
+    log.info("Model saved to %s", model_path)
+
+    # Persist test set so evaluation notebook can load the same held-out split.
+    joblib.dump(X_test, x_test_path)
+    joblib.dump(y_test, y_test_path)
+    log.info("Test artifacts saved to data/processed/")
+
+
+if __name__ == "__main__":
+    main()
