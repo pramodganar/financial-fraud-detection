@@ -78,19 +78,19 @@ XGBoost outputs a continuous fraud probability. The decision threshold (default:
 
 ## Results
 
-All metrics are from the corrected pipeline (SMOTE only, no `scale_pos_weight`), evaluated on a stratified held-out test set of 100,000 transactions (fraud rate: 0.129%).
+All metrics are from the corrected pipeline, evaluated on a stratified held-out test set of 100,000 transactions (fraud rate: 0.129%).
 
 ### Final Model — XGBoost (default 0.5 threshold)
 
 | Metric | Score |
 |---|---|
-| Precision | **45.2%** |
-| Recall | **91.5%** |
-| F1 | **60.5%** |
-| ROC-AUC | **0.998** |
-| PR-AUC | **0.896** |
+| Precision | **45.6%** |
+| Recall | **93.0%** |
+| F1 | **61.2%** |
+| ROC-AUC | **0.999** |
+| PR-AUC | **0.922** |
 
-PR-AUC of 0.896 means the model maintains high precision across most of the recall range — a strong result given the 800:1 class imbalance (a random classifier would score ~0.001 PR-AUC).
+PR-AUC of 0.922 means the model maintains high precision across most of the recall range — a strong result given the 800:1 class imbalance (a random classifier would score ~0.001 PR-AUC).
 
 ### 6-Model Comparison (standard hyperparameters, held-out test set, default 0.5 threshold)
 
@@ -107,16 +107,22 @@ Models are ranked by PR-AUC — the most meaningful metric for imbalanced fraud 
 
 XGBoost, CatBoost, and LightGBM are within 0.009 PR-AUC of each other — effectively tied. XGBoost was selected as the final model and tuned further (300 estimators, max_depth=8, lr=0.05).
 
-### Before vs. After Fixing Class Imbalance Handling
+### Pipeline Fixes and Their Impact on Metrics
 
-The original pipeline applied SMOTE *and* `scale_pos_weight` simultaneously. After fixing:
+Three bugs were identified and fixed during a full code review of this project:
+
+| Fix | Root cause | Impact |
+|---|---|---|
+| Remove `scale_pos_weight` | SMOTE already balances classes 1:1; using both double-corrects for imbalance, inflating recall and destroying precision | Precision 25% → 46% |
+| Fix one-hot encoding at inference | `pd.get_dummies(drop_first=True)` on a single-row DataFrame silently zeros all type columns — model couldn't see transaction type at inference time | PR-AUC 0.896 → 0.922 |
+| Fix `fillna` before split | `fillna(df.median())` on the full dataset leaks test-set statistics into training | Correctness fix (low practical impact here) |
 
 | | Precision | Recall | F1 | PR-AUC |
 |---|---|---|---|---|
-| Before (SMOTE + scale_pos_weight) | 25.3% | 93.8% | 39.8% | — |
-| After (SMOTE only, tuned params) | **45.2%** | **91.5%** | **60.5%** | **0.896** |
+| Original (all bugs present) | 25.3% | 93.8% | 39.8% | — |
+| After all fixes | **45.6%** | **93.0%** | **61.2%** | **0.922** |
 
-Precision nearly doubled with only a 2.3 pp drop in recall — the corrected model generates far fewer false alarms while still catching 9 out of 10 fraudulent transactions.
+Precision nearly doubled with no meaningful drop in recall — the corrected model generates far fewer false alarms while catching 9 out of 10 fraudulent transactions.
 
 ---
 

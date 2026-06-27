@@ -34,7 +34,14 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
 
     df.drop(['nameOrig', 'nameDest'], axis=1, inplace=True, errors='ignore')
 
-    df = pd.get_dummies(df, columns=['type'], drop_first=True)
+    # Manually one-hot encode 'type' instead of using pd.get_dummies().
+    # pd.get_dummies(drop_first=True) at inference time drops the only dummy
+    # column it creates when a single-row DataFrame contains just one category,
+    # leaving all type columns as zero — the model sees no transaction type signal.
+    # The reference category (dropped) is CASH_IN, matching training behaviour.
+    for cat in ('CASH_OUT', 'DEBIT', 'PAYMENT', 'TRANSFER'):
+        df[f'type_{cat}'] = (df['type'] == cat).astype(int)
+    df.drop('type', axis=1, inplace=True)
 
     df['orig_balance_diff'] = df['oldbalanceOrg'] - df['newbalanceOrig']
     df['dest_balance_diff'] = df['newbalanceDest'] - df['oldbalanceDest']
