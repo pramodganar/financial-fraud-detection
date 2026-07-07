@@ -14,10 +14,10 @@ Confusion (LogReg @0.5): TN=409,362 FP=14,754 FN=5 TP=532.
 
 Read: the linear baseline already catches almost all fraud (high recall, strong
 ROC/PR-AUC) but at terrible precision — ~15k false positives at the default
-0.5 threshold. Threshold tuning and a stronger model (Stage 5–6) are about
-trading some of that recall for far better precision.
+0.5 threshold. Threshold tuning and a stronger model (model selection and the
+eval report) are about trading some of that recall for far better precision.
 
 Caveat: 17 of the 554 eval-window frauds have a missing `type` and are dropped
 by the pipeline filter, so recall here is over 537. Treated as an out-of-scope
-recall ceiling; final evaluation (Stage 6) will score the full eval set so those
+recall ceiling; final evaluation scores the full eval set so those
 count as misses.

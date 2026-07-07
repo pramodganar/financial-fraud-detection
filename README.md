@@ -109,7 +109,7 @@ python -m src.feature_importance
 python -m src.train             # fit on 4M rows, persist model + threshold
 python -m src.production_eval   # score the held-out set once
 python -m src.error_analysis    # profile the misses
-python -m pytest -q             # 13 tests, no data file needed
+python -m pytest -q             # 12 tests, no data file needed
 ```
 
 Serve: `python app.py` (Flask API) or `streamlit run streamlit_app.py`. A hosted

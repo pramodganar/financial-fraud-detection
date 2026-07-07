@@ -24,6 +24,7 @@ models/*.pkl
 .vscode/
 .idea/
 .DS_Store
+.claude/
 
 # env
 .env

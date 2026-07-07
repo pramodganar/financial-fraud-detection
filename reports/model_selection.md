@@ -16,7 +16,7 @@ The two boosted models are tied on ranking (PR-AUC differs by 0.0002, noise). I
 picked XGBoost because:
 - marginally best PR-AUC, and
 - it is far better calibrated at the default threshold (21 false positives vs 326
-  for HGB), which makes the threshold choice in Stage 6 more forgiving, and
+  for HGB), which makes the threshold choice in the eval report more forgiving, and
 - scale_pos_weight is a clean, cheap imbalance handle (missing balances are
   median-imputed, train-fit, in the shared pipeline before the model).
 

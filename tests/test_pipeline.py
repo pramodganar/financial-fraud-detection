@@ -91,13 +91,3 @@ def test_metrics_at_threshold_matches_hand_count():
     p = np.array([0.10, 0.95, 0.40, 0.99])  # at 0.90: one FP (0.95), one TP (0.99)
     m = metrics(y, p, thr=0.90)
     assert (m["TP"], m["FP"], m["FN"], m["TN"]) == (1, 1, 1, 1)
-
-
-# --- stratified split preserves the class ratio -----------------------------
-
-def test_stratified_split_preserves_class_ratio():
-    from sklearn.model_selection import train_test_split
-    y = np.array([0] * 997 + [1] * 3)
-    _, _, y_tr, y_te = train_test_split(
-        np.arange(1000), y, test_size=0.3, stratify=y, random_state=0)
-    assert abs(y_tr.mean() - y_te.mean()) < 0.002

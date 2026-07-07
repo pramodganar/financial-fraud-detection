@@ -13,7 +13,7 @@ from src.pipeline import make_features, FEATURE_COLUMNS
 from src.model_selection import build_models
 
 TRAIN_END = 4_000_000
-DECISION_THRESHOLD = 0.90  # chosen in Stage 6 (eval): precision ~0.98, recall ~0.962
+DECISION_THRESHOLD = 0.90  # chosen on the eval threshold sweep: precision ~0.98, recall ~0.962
 
 
 def model_path():

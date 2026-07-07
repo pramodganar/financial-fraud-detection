@@ -8,7 +8,7 @@ rows is wasteful and distorts the calibration we need for threshold tuning):
 
 Selection metric is PR-AUC on the eval split, scored over the full 1M rows
 (unknown-type frauds count as misses). Threshold-dependent numbers are at 0.5
-just for context; the real threshold choice happens in Stage 6.
+just for context; the real threshold choice happens in the eval report.
 """
 
 from sklearn.ensemble import HistGradientBoostingClassifier
@@ -67,7 +67,7 @@ def main():
     for name, model in build_models(y_tr).items():
         model.fit(X_tr, y_tr)
         y_true, proba = score_full(model, eval_raw)
-        m = metrics(y_true, proba, thr=0.5)  # context only; real point is Stage 6
+        m = metrics(y_true, proba, thr=0.5)  # context only; real point is the eval report
         rows.append((name, m))
         print(f"{name:8s} PR-AUC={m['PR_AUC']:.4f} ROC-AUC={m['ROC_AUC']:.4f} "
               f"P={m['precision']:.3f} R={m['recall']:.3f} F1={m['f1']:.3f} "
