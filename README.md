@@ -86,8 +86,13 @@ not redistributed here. Columns:
 ```
 python -m venv venv
 venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements.txt        # app + scoring (also what the deploy installs)
+pip install -r requirements-dev.txt    # + training, reporting, notebook, tests
 ```
+
+The runtime set (`requirements.txt`) is all the Flask/Streamlit apps and batch
+scoring need; the pipeline scripts below, the EDA notebook, and the test suite
+also require `requirements-dev.txt`.
 
 Data: see [Dataset](#dataset) for the source. Put the CSV at
 `data/raw/fraud_detection.csv`, or drop the brief's `Classification.db` in `data/`

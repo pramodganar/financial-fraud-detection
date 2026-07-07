@@ -1,0 +1,7 @@
+# Full pipeline: training, reporting, EDA notebook, and tests.
+# Installs the runtime set plus the analysis-only dependencies.
+-r requirements.txt
+matplotlib==3.9.1
+seaborn==0.13.2
+jupyter==1.0.0
+pytest==8.3.2
