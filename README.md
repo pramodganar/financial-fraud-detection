@@ -4,6 +4,8 @@ Fraud scorer for mobile-money transactions: ~6.36M PaySim-style records, ~0.13%
 fraud. XGBoost with class weighting, a cost-aware decision threshold, and one
 shared pipeline so training and serving can't drift.
 
+**Live demo:** https://financial-fraud-detection-xqmssgyqc8vs3wpviqwkqx.streamlit.app/
+
 ## Results
 
 Held-out production set (final ~1.36M rows, never used for training, selection, or
@@ -105,7 +107,8 @@ python -m src.error_analysis    # profile the misses
 python -m pytest -q             # 13 tests, no data file needed
 ```
 
-Serve: `python app.py` (Flask API) or `streamlit run streamlit_app.py`.
+Serve: `python app.py` (Flask API) or `streamlit run streamlit_app.py`. A hosted
+Streamlit build runs at the [live demo](https://financial-fraud-detection-xqmssgyqc8vs3wpviqwkqx.streamlit.app/).
 
 ## Limitations
 
