@@ -1,0 +1,30 @@
+# venv
+venv/
+.venv/
+env/
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+
+# data and db
+data/
+*.db
+*.csv
+
+# models / artifacts
+models/*.joblib
+models/*.pkl
+
+# notebooks
+.ipynb_checkpoints/
+
+# os / editor
+.vscode/
+.idea/
+.DS_Store
+
+# env
+.env
+
