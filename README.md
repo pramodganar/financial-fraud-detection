@@ -115,6 +115,20 @@ python -m pytest -q             # 13 tests, no data file needed
 Serve: `python app.py` (Flask API) or `streamlit run streamlit_app.py`. A hosted
 Streamlit build runs at the [live demo](https://financial-fraud-detection-xqmssgyqc8vs3wpviqwkqx.streamlit.app/).
 
+## Deployment
+
+The [live demo](https://financial-fraud-detection-xqmssgyqc8vs3wpviqwkqx.streamlit.app/)
+is deployed on Streamlit Community Cloud from this repo:
+
+- Main module: `streamlit_app.py`.
+- Python is pinned to 3.11 via `.python-version`; the pinned deps have wheels
+  there, so the cloud install needs no source builds.
+- The cloud installs only `requirements.txt` (the slim runtime set), not
+  `requirements-dev.txt` — the app doesn't need matplotlib/jupyter/tests.
+- The trained artifact `models/fraud_model.joblib` (~1 MB) is committed so the app
+  can score without the raw data or a retrain; the `.gitignore` rule still excludes
+  larger/experimental artifacts, so this one is force-added.
+
 ## Limitations
 
 **Synthetic data.** PaySim's balance-error signal is cleaner and more
