@@ -15,6 +15,7 @@ from src import data
 
 def _tiny_frame():
     return pd.DataFrame({
+        "step": [1, 2],
         "type": ["TRANSFER", "CASH_OUT"],
         "amount": [181.0, 200.0],
         "oldbalanceOrg": [181.0, 200.0],

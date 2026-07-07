@@ -44,17 +44,25 @@ def load_data(source: str = "csv", nrows: int | None = None) -> pd.DataFrame:
     nrows:  optional row cap, handy for quick iteration on the 6.3M-row file.
     """
     if source == "csv":
-        return pd.read_csv(csv_path(), dtype=DTYPES, nrows=nrows)
-
-    if source == "sqlite":
+        df = pd.read_csv(csv_path(), dtype=DTYPES, nrows=nrows)
+    elif source == "sqlite":
         db = repo_root() / "data" / "Classification.db"
-        query = "SELECT * FROM fraud_detection"
+        # ORDER BY step so the positional time-ordered split holds regardless of
+        # table insertion order; LIMIT applies after ordering. Parameterized.
+        query = "SELECT * FROM fraud_detection ORDER BY step"
+        params: list = []
         if nrows is not None:
-            query += f" LIMIT {nrows}"
+            query += " LIMIT ?"
+            params = [nrows]
         with sqlite3.connect(db) as conn:
-            return pd.read_sql(query, conn)
+            df = pd.read_sql(query, conn, params=params)
+    else:
+        raise ValueError(f"unknown source: {source!r} (use 'csv' or 'sqlite')")
 
-    raise ValueError(f"unknown source: {source!r} (use 'csv' or 'sqlite')")
+    # The train/eval/prod split is positional and assumes time order; guard it.
+    if "step" in df.columns:
+        assert df["step"].is_monotonic_increasing, "rows not time-ordered by step"
+    return df
 
 
 if __name__ == "__main__":
