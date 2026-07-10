@@ -8,7 +8,7 @@ rest of the pipeline. Run:  streamlit run streamlit_app.py
 import pandas as pd
 import streamlit as st
 
-from src.predict import load_artifact, score_records
+from src.predict import check_input, load_artifact, score_records
 
 st.set_page_config(page_title="Fraud Detection")
 
@@ -69,12 +69,16 @@ with tab_batch:
     up = st.file_uploader("CSV file", type="csv")
     if up is not None:
         df = pd.read_csv(up)
-        scored = score_records(df, art)
-        flagged = int(scored["isFraud_pred"].sum())
-        st.write(f"Scored **{len(scored)}** rows · flagged **{flagged}** as fraud.")
-        st.dataframe(scored.head(200))
-        st.download_button(
-            "Download scored CSV",
-            scored.to_csv(index=False).encode(),
-            file_name="scored.csv", mime="text/csv",
-        )
+        err = check_input(df)
+        if err:
+            st.error(err)
+        else:
+            scored = score_records(df, art)
+            flagged = int(scored["isFraud_pred"].sum())
+            st.write(f"Scored **{len(scored)}** rows · flagged **{flagged}** as fraud.")
+            st.dataframe(scored.head(200))
+            st.download_button(
+                "Download scored CSV",
+                scored.to_csv(index=False).encode(),
+                file_name="scored.csv", mime="text/csv",
+            )

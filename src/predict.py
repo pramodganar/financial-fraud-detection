@@ -21,6 +21,30 @@ import pandas as pd
 from src.data import load_data, repo_root
 from src.pipeline import make_features
 
+# Columns make_features needs from each record; everything after "type" must be
+# numeric. Shared by the Flask API and the Streamlit app so both validate the
+# same contract.
+REQUIRED_COLUMNS = ["type", "amount", "oldbalanceOrg", "newbalanceOrig",
+                    "oldbalanceDest", "newbalanceDest"]
+NUMERIC_COLUMNS = REQUIRED_COLUMNS[1:]
+
+
+def check_input(df: pd.DataFrame) -> str | None:
+    """Validate a raw transaction frame before scoring.
+
+    Returns an error message, or None if scoreable. On success the numeric
+    columns are coerced in place (CSV uploads arrive as strings); a value that
+    can't be coerced is an error rather than silently imputed.
+    """
+    missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
+    if missing:
+        return f"missing fields: {missing}"
+    try:
+        df[NUMERIC_COLUMNS] = df[NUMERIC_COLUMNS].apply(pd.to_numeric)
+    except (ValueError, TypeError) as e:
+        return f"non-numeric value in a numeric field: {e}"
+    return None
+
 
 def load_artifact(path=None):
     path = path or (repo_root() / "models" / "fraud_model.joblib")

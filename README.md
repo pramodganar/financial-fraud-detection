@@ -51,7 +51,7 @@ not redistributed here. Columns:
 | column | type | meaning |
 |--------|------|---------|
 | `step` | int | hour of simulation (1–743, 30 days), time order |
-| `type` | str | TRANSFER, CASH_OUT, PAYMENT, CASH_IN, DEBIT |
+| `type` | str | TRANSFER, CASH_OUT, PAYMENT, CASH_IN, DEBIT; missing on ~3.2% of rows (those can't be scored — see error analysis) |
 | `amount` | float | transaction amount |
 | `nameOrig` / `nameDest` | str | origin / destination account IDs (unused — no ID features) |
 | `oldbalanceOrg` / `newbalanceOrig` | float | origin balance before / after |
@@ -85,7 +85,8 @@ not redistributed here. Columns:
 
 ```
 python -m venv venv
-venv\Scripts\activate
+venv\Scripts\activate         # Windows
+source venv/bin/activate      # macOS / Linux
 pip install -r requirements.txt        # app + scoring (also what the deploy installs)
 pip install -r requirements-dev.txt    # + training, reporting, notebook, tests
 ```
@@ -109,7 +110,7 @@ python -m src.feature_importance
 python -m src.train             # fit on 4M rows, persist model + threshold
 python -m src.production_eval   # score the held-out set once
 python -m src.error_analysis    # profile the misses
-python -m pytest -q             # 12 tests, no data file needed
+python -m pytest -q             # 15 tests, no data file needed
 ```
 
 Serve: `python app.py` (Flask API) or `streamlit run streamlit_app.py`. A hosted

@@ -10,8 +10,9 @@ import sqlite3
 
 import pandas as pd
 
-# Column dtypes. step/balances are floats in the file; the name columns and
-# type are strings; the two flags are 0/1 ints.
+# Column dtypes: step is an integer hour index, type is categorical, the name
+# columns are strings, balances/amount are floats, the two flags are 0/1 ints.
+# Applied on both the CSV and sqlite paths so the sources yield the same frame.
 DTYPES = {
     "step": "int32",
     "type": "category",
@@ -56,6 +57,9 @@ def load_data(source: str = "csv", nrows: int | None = None) -> pd.DataFrame:
             params = [nrows]
         with sqlite3.connect(db) as conn:
             df = pd.read_sql(query, conn, params=params)
+        # read_sql infers dtypes; align with the CSV path so downstream code
+        # sees identical frames regardless of source.
+        df = df.astype({c: t for c, t in DTYPES.items() if c in df.columns})
     else:
         raise ValueError(f"unknown source: {source!r} (use 'csv' or 'sqlite')")
 

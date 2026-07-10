@@ -10,6 +10,7 @@ import pytest
 
 from src.pipeline import make_features, FEATURE_COLUMNS
 from src.evaluate import metrics
+from src.predict import check_input
 from src.train import DECISION_THRESHOLD
 
 
@@ -84,6 +85,27 @@ def test_metrics_requires_explicit_threshold():
     y, p = np.array([0, 1]), np.array([0.2, 0.95])
     with pytest.raises(TypeError):
         metrics(y, p)
+
+
+# --- input validation shared by the Flask API and the Streamlit app ---------
+
+def test_check_input_reports_missing_columns():
+    df = pd.DataFrame([{"type": "TRANSFER", "amount": 181.0}])
+    err = check_input(df)
+    assert err is not None and "missing fields" in err
+
+
+def test_check_input_rejects_non_numeric_values():
+    df = _raw([["TRANSFER", "abc", 181, 0, 0, 0, 0]])
+    err = check_input(df)
+    assert err is not None and "non-numeric" in err
+
+
+def test_check_input_coerces_string_numbers_in_place():
+    # CSV uploads arrive as strings; valid numbers must coerce, not error.
+    df = _raw([["TRANSFER", "181.0", "181", "0", "0", "0", 0]])
+    assert check_input(df) is None
+    assert df["amount"].dtype.kind == "f"
 
 
 def test_metrics_at_threshold_matches_hand_count():

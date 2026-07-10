@@ -1,6 +1,8 @@
 # EDA findings
 
-Source: `notebooks/eda.ipynb`, run on the full 6,362,620-row file.
+Source: `notebooks/eda.ipynb`, run on the full 6,362,620-row file. Notebook
+outputs are stripped for clean diffs; every number and plot below regenerates by
+running the notebook top to bottom against `data/raw/fraud_detection.csv`.
 
 ## Class balance
 - 8,213 fraud rows out of 6,362,620 → **0.129%** positive. Accuracy is useless;

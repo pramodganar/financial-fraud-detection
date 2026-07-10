@@ -15,14 +15,10 @@ Then:
 import pandas as pd
 from flask import Flask, jsonify, request
 
-from src.predict import load_artifact, score_records
+from src.predict import check_input, load_artifact, score_records
 
 app = Flask(__name__)
 ARTIFACT = load_artifact()  # loaded once at startup
-
-# Columns make_features needs from each record.
-REQUIRED = ["type", "amount", "oldbalanceOrg", "newbalanceOrig",
-            "oldbalanceDest", "newbalanceDest"]
 
 
 @app.get("/health")
@@ -46,9 +42,9 @@ def predict():
         return jsonify(error="send a record object or a list of records"), 400
 
     df = pd.DataFrame(records)
-    missing = [c for c in REQUIRED if c not in df.columns]
-    if missing:
-        return jsonify(error=f"missing fields: {missing}"), 400
+    err = check_input(df)
+    if err:
+        return jsonify(error=err), 400
 
     scored = score_records(df, ARTIFACT)
     results = scored[["fraud_probability", "isFraud_pred"]].to_dict(orient="records")

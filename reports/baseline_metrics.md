@@ -3,6 +3,11 @@
 Train: first 4M rows. Eval: next 1M rows. Metrics on the eval split (T/CO only).
 Accuracy intentionally omitted — meaningless at 0.13% positives.
 
+Note: numbers here differ from `model_selection.md` for the same logreg because
+that file scores the *full* 1M-row eval set (frauds in unknown-type rows counted
+as misses), while this one scores only the TRANSFER/CASH_OUT subset the model
+actually sees. Same model, different denominator.
+
 Eval no-skill PR-AUC floor (prevalence) = 0.00126.
 
 | model | PR-AUC | ROC-AUC | precision@0.5 | recall@0.5 | F1@0.5 |
